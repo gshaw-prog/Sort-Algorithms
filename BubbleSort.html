@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0478 Bubble Sort Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bar-transition { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .highlight-inner { border: 3px solid #6366f1; transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center py-10 px-4 font-sans">
+
+    <!-- Header -->
+    <div class="text-center mb-10">
+        <h1 class="text-4xl font-black uppercase tracking-tighter text-indigo-400">Bubble Sort Visualizer</h1>
+        <p class="text-slate-400 mt-2 italic">Visualizing Inner vs Outer Loop Logic (Syllabus 0478)</p>
+    </div>
+
+    <!-- Visualizer Container -->
+    <div class="max-w-4xl w-full bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl relative mb-8">
+        <div id="bar-container" class="flex justify-center items-end gap-4 h-64 relative">
+            <!-- Bars will be injected here by JS -->
+        </div>
+
+        <!-- Loop State Indicators -->
+        <div class="absolute top-4 left-6 flex flex-col gap-2">
+            <div id="swapped-badge" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-slate-700 text-slate-400">
+                Swapped: <span id="swapped-val">FALSE</span>
+            </div>
+            <div id="pass-badge" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-600 text-white">
+                Outer Loop Pass: <span id="pass-val">1</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls & Pseudocode -->
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Log Panel -->
+        <div class="bg-slate-950 rounded-2xl p-6 border border-slate-800">
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Execution Log</h3>
+            <div id="log-text" class="font-mono text-sm text-indigo-300 min-h-[80px]">
+                Click "Step" to start the Inner Loop...
+            </div>
+            <div class="mt-6 flex gap-4">
+                <button onclick="stepAlgorithm()" id="step-btn" class="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold uppercase transition-all active:scale-95">
+                    Step Algorithm
+                </button>
+                <button onclick="resetSort()" class="px-6 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Pseudocode Tracker -->
+        <div class="bg-slate-950 rounded-2xl p-6 border border-slate-800 font-mono text-[11px] leading-relaxed">
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Pseudocode State</h3>
+            <div id="line-repeat" class="p-1">REPEAT</div>
+            <div id="line-flag" class="pl-4 p-1 text-slate-500">   Swapped &larr; FALSE</div>
+            <div id="line-for" class="pl-4 p-1 text-slate-500">   FOR i &larr; 1 TO (Num - 1)</div>
+            <div id="line-if" class="pl-8 p-1 text-slate-500">      IF List[i] > List[i+1] THEN</div>
+            <div id="line-swap" class="pl-12 p-1 text-slate-500">         Swap & Flag Swapped &larr; TRUE</div>
+            <div class="pl-4 p-1 text-slate-400">   NEXT i</div>
+            <div id="line-until" class="p-1 text-slate-400">UNTIL Swapped = FALSE</div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let data = [23, 12, 45, 8, 31];
+        let innerIndex = 0;
+        let swapped = false;
+        let passCount = 1;
+        let isSorted = false;
+
+        function render() {
+            const container = document.getElementById('bar-container');
+            container.innerHTML = '';
+            
+            data.forEach((val, idx) => {
+                const bar = document.createElement('div');
+                const isHighlight = (idx === innerIndex || idx === innerIndex + 1) && !isSorted;
+                
+                bar.className = `bar-transition w-16 flex items-center justify-center font-bold text-xl rounded-t-lg ${isHighlight ? 'bg-indigo-500 highlight-inner' : 'bg-slate-600 opacity-60'} ${isSorted ? 'bg-emerald-500 opacity-100' : ''}`;
+                bar.style.height = `${(val / 50) * 100}%`;
+                bar.innerHTML = `<span class="mt-auto pb-2">${val}</span>`;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex flex-col items-center gap-2";
+                wrapper.appendChild(bar);
+                wrapper.innerHTML += `<span class="text-[10px] font-mono text-slate-500">Index ${idx + 1}</span>`;
+                
+                container.appendChild(wrapper);
+            });
+
+            // Update badges
+            document.getElementById('swapped-val').innerText = swapped ? "TRUE" : "FALSE";
+            document.getElementById('swapped-badge').className = swapped ? 
+                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500 text-black" : 
+                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-slate-700 text-slate-400";
+            document.getElementById('pass-val').innerText = passCount;
+        }
+
+        function updateLog(msg) {
+            document.getElementById('log-text').innerText = msg;
+        }
+
+        function highlightLine(id) {
+            const lines = ['line-repeat', 'line-flag', 'line-for', 'line-if', 'line-swap', 'line-until'];
+            lines.forEach(l => {
+                const el = document.getElementById(l);
+                el.className = el.className.replace('text-white bg-indigo-900', 'text-slate-500');
+            });
+            const active = document.getElementById(id);
+            active.className = active.className.replace('text-slate-500', 'text-white bg-indigo-900');
+        }
+
+        function stepAlgorithm() {
+            if (isSorted) return;
+
+            const a = data[innerIndex];
+            const b = data[innerIndex + 1];
+
+            highlightLine('line-if');
+
+            if (a > b) {
+                // Perform Swap
+                data[innerIndex] = b;
+                data[innerIndex + 1] = a;
+                swapped = true;
+                highlightLine('line-swap');
+                updateLog(`Inner Loop: ${a} > ${b}. Swapping them and setting Swapped = TRUE.`);
+            } else {
+                updateLog(`Inner Loop: ${a} <= ${b}. No swap needed.`);
+            }
+
+            // Next step logic
+            if (innerIndex < data.length - 2) {
+                innerIndex++;
+            } else {
+                // Pass Finished
+                if (!swapped) {
+                    isSorted = true;
+                    highlightLine('line-until');
+                    updateLog("Outer Loop Check: Swapped is still FALSE. EXITING Algorithm.");
+                    document.getElementById('step-btn').disabled = true;
+                } else {
+                    innerIndex = 0;
+                    swapped = false;
+                    passCount++;
+                    highlightLine('line-flag');
+                    updateLog(`Outer Loop: Pass ${passCount-1} finished. Starting next pass...`);
+                }
+            }
+            render();
+        }
+
+        function resetSort() {
+            data = [23, 12, 45, 8, 31];
+            innerIndex = 0;
+            swapped = false;
+            passCount = 1;
+            isSorted = false;
+            document.getElementById('step-btn').disabled = false;
+            updateLog("List reset. Ready to start.");
+            highlightLine('line-repeat');
+            render();
+        }
+
+        // Initial load
+        render();
+    </script>
+</body>
+</html>
